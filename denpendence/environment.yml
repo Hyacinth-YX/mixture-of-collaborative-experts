@@ -1,0 +1,7 @@
+channels:
+  - defaults
+  - rdkit
+  - pyg
+dependencies:
+  - rdkit
+  - pyg

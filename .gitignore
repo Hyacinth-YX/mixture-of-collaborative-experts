@@ -1,0 +1,10 @@
+figs_src/
+data/
+cache/
+cache.tar.gz
+output
+.idea/
+__pycache__/
+result/
+descriptastorus.zip
+example_main.sh
