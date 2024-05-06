@@ -9,7 +9,7 @@ from torch_geometric.nn import global_add_pool, global_mean_pool, global_max_poo
 
 class MoCEGraphPred(torch.nn.Module):
     def __init__(self, num_layer, emb_dim, num_tasks, drop_ratio=0.3, desc_in=False, desc_in_size=1536,
-                 num_experts=30, k=4, task_routing=False, dropout=0.5, num_g_experts=16, JK='last', csize=3,
+                 num_experts=30, k=4, task_routing=False, dropout=0.5, num_g_experts=16, JK='last',
                  sag_pool=False, kt=None, open_dy=False, iattvec_loss=False, expert_struct_mode='bottleneck',
                  hk=12):
         super(MoCEGraphPred, self).__init__()
@@ -37,8 +37,6 @@ class MoCEGraphPred(torch.nn.Module):
         for layer in range(num_layer):
             self.norms.append(BatchNorm(emb_dim))
 
-        self.aux_gnn = GNN(csize, emb_dim, JK, drop_ratio=drop_ratio, gnn_type='gin')
-
     def freeze_router(self):
         for layer in self.gnn:
             layer.freeze_router()
@@ -50,7 +48,6 @@ class MoCEGraphPred(torch.nn.Module):
         for layer in self.norms:
             layer.reset_parameters()
         self.node_emb.reset_parameters()
-        self.aux_gnn.reset_parameters()
 
     @property
     def base(self):
@@ -72,10 +69,6 @@ class MoCEGraphPred(torch.nn.Module):
             x = self.gnn[layer].gnns_forward(x=x, edge_index=edge_index, edge_attr=edge_attr)
             x = self.norms[layer](x)
             x = F.dropout(F.relu(x), self.drop_ratio, training=self.training)
-        return x
-
-    def context_forward(self, x, edge_index, edge_attr):
-        x = self.aux_gnn(x, edge_index, edge_attr)
         return x
 
     def forward(self, *argv, **kwargs):

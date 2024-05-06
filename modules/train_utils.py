@@ -51,47 +51,10 @@ def cycle_index(num, shift):
     return arr
 
 
-def train(model, train_loader, optimizer, criterion, device, schedule=None, grad_noise=False,
-          unsupervise_loader=None, neg_samples=1, open_aux=True, unsup_alpha=0.1):
+def train(model, train_loader, optimizer, criterion, device, schedule=None, grad_noise=False, open_aux=True):
     model.train()
     total_loss = 0
     res = {}
-    if unsupervise_loader is not None:
-        balanced_loss_accum = 0
-        acc_accum = 0
-        step = 0
-        for step, batch in tqdm(enumerate(unsupervise_loader), desc="unsupervised part"):
-            batch = batch.to(device)
-
-            substruct_rep = \
-                model.gnns_forward(batch.x_substruct, batch.edge_index_substruct, batch.edge_attr_substruct)[
-                    batch.center_substruct_idx]
-            overlapped_node_rep = \
-                model.context_forward(batch.x_context, batch.edge_index_context, batch.edge_attr_context)[
-                    batch.overlap_context_substruct_idx]
-
-            # positive context representation
-            context_rep = pool_func(overlapped_node_rep, batch.batch_overlapped_context, mode="mean")
-            # negative contexts are obtained by shifting the indicies of context embeddings
-            neg_context_rep = torch.cat(
-                [context_rep[cycle_index(len(context_rep), i + 1)] for i in range(neg_samples)], dim=0)
-
-            pred_pos = torch.sum(substruct_rep * context_rep, dim=1)
-            pred_neg = torch.sum(substruct_rep.repeat((neg_samples, 1)) * neg_context_rep, dim=1)
-            un_criterion = torch.nn.BCEWithLogitsLoss()
-            loss_pos = un_criterion(pred_pos.double(), torch.ones(len(pred_pos)).to(pred_pos.device).double())
-            loss_neg = un_criterion(pred_neg.double(), torch.zeros(len(pred_neg)).to(pred_neg.device).double())
-            optimizer.zero_grad()
-            loss = loss_pos + neg_samples * loss_neg
-            loss *= unsup_alpha
-            loss.backward()
-            optimizer.step()
-            balanced_loss_accum += float(loss_pos.detach().cpu().item() + loss_neg.detach().cpu().item())
-            acc_accum += 0.5 * (float(torch.sum(pred_pos > 0).detach().cpu().item()) / len(pred_pos) + float(
-                torch.sum(pred_neg < 0).detach().cpu().item()) / len(pred_neg))
-        step += 1
-        print(f"unsupervised part : step {step}, loss {balanced_loss_accum / step}, acc {acc_accum / step}")
-        res.update({"Loss/Unsupervised": balanced_loss_accum / step, "Acc/Unsupervised": acc_accum / step})
 
     for j, data in tqdm(enumerate(train_loader), desc="supervised part"):
         data = data.to(device)

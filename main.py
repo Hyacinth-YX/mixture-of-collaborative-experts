@@ -6,8 +6,6 @@ from evaluate import evaluate_and_save_results
 from modules.utils import join_path, ensure_dir, seed_everything
 from datasets.datasets import load_comb_dataset, get_criterion, get_tasks
 from modules.train_utils import train, evalue, save_checkpoint, get_log_writer, tensor_board_log
-from modules.dataloader import DataLoaderSubstructContext
-from modules.unsupervised_utils import ExtractSubstructureContextPair
 from copy import deepcopy
 
 if __name__ == '__main__':
@@ -46,24 +44,6 @@ if __name__ == '__main__':
             log_dir = join_path(args.log_dir, task_name + '-' + str(int(time.time())))
             writer = get_log_writer(log_dir)
 
-            unsup_loader = None
-            if not args.no_unsupervised:
-                l1 = args.num_layer - 1
-                l2 = l1 + args.csize
-
-                print("num layer: %d l1: %d l2: %d" % (args.num_layer, l1, l2))
-
-                trans = ExtractSubstructureContextPair(args.num_layer, l1, l2)
-
-                new_dataset = deepcopy(train_dataset)
-                if not args.no_unsupervised_test:
-                    new_dataset.extend(deepcopy(test_dataset))
-                    if val_dataset:
-                        new_dataset.extend(deepcopy(val_dataset))
-
-                dataset = list(map(trans, new_dataset))
-                unsup_loader = DataLoaderSubstructContext(dataset, batch_size=args.batch_size, shuffle=True)
-
             # get loader
             train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
             test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
@@ -72,7 +52,7 @@ if __name__ == '__main__':
                 val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
             best_val_loss = None
             best_epoch = None
-            if args.load_path is not None:
+            if args.load_path is not None:  # train from checkpoint
                 checkpoint = torch.load(join_path(args.load_path, 'checkpoint.pth'))
                 Params = checkpoint['Params']
                 Params.update({'num_tasks': num_tasks})
@@ -100,8 +80,7 @@ if __name__ == '__main__':
                 print("total epoch: {}".format(epoch))
                 ensure_dir(args.save_path)
                 for i in range(checkpoint['epoch'], epoch):
-                    res = train(model, train_loader, optimizer, criterion, device, schedule=schedule,
-                                unsupervise_loader=unsup_loader, neg_samples=args.neg_samples)
+                    res = train(model, train_loader, optimizer, criterion, device, schedule=schedule)
                     train_loss = res['Loss/Train']
                     test_loss = evalue(model, test_loader, criterion, device)
                     res['Loss/Test'] = test_loss
@@ -136,7 +115,7 @@ if __name__ == '__main__':
                                                   cache_path_prefix=args.cache_path_prefix,
                                                   data_path_prefix=args.data_path_prefix)
 
-            else:
+            else:  # train from scratch
                 pretrain_save_path = join_path(args.save_path, task_name)
                 ensure_dir(pretrain_save_path)
 
@@ -179,8 +158,7 @@ if __name__ == '__main__':
                 schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epoch, eta_min=args.eta_min)
                 epoch = args.epoch
                 for i in range(epoch):
-                    res = train(model, train_loader, optimizer, criterion, device, schedule=schedule,
-                                unsupervise_loader=unsup_loader, neg_samples=args.neg_samples)
+                    res = train(model, train_loader, optimizer, criterion, device, schedule=schedule)
                     train_loss = res['Loss/Train']
                     test_loss = evalue(model, test_loader, criterion, device)
                     res['Loss/Test'] = test_loss

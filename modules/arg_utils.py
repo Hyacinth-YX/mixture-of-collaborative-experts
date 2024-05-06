@@ -74,12 +74,6 @@ def get_args():
     parser.add_argument('--base_few_shot', action='store_true', default=False,
                         help="do few shot experiment on base gnn")
 
-    # unsupervised
-    parser.add_argument('--csize', type=int, default=3)
-    parser.add_argument('--neg_samples', type=int, default=1)
-    parser.add_argument('--no_unsupervised_test', action='store_true', default=False)
-    parser.add_argument('--no_unsupervised', action='store_true', default=False)
-
     args = parser.parse_args()
 
     if args.model == 'GNN':

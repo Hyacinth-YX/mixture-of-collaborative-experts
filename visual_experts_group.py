@@ -45,8 +45,6 @@ if __name__ == '__main__':
         criterion = get_criterion(args.dataset)
         num_tasks = get_tasks(args.dataset)
 
-        unsup_loader = None
-
         # get loader
         train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
         test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
