@@ -56,6 +56,7 @@ def get_args():
     parser.add_argument('--use_adjust', action='store_true', default=False)
     parser.add_argument('--expert_struct_mode', type=str, default='expand',
                         choices=['bottleneck', 'expand', 'None'])
+    parser.add_argument('--group_importance_loss', action='store_true', default=False)
 
     # dataset special setting
     parser.add_argument('--cache_path_prefix', type=str, default='')
@@ -73,6 +74,8 @@ def get_args():
     parser.add_argument('--no_load', action='store_true', default=False, help="whether to load the model")
     parser.add_argument('--base_few_shot', action='store_true', default=False,
                         help="do few shot experiment on base gnn")
+
+    parser.add_argument('--num_workers', type=int, default=16)
 
     args = parser.parse_args()
 

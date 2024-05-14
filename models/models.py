@@ -11,7 +11,7 @@ class MoCEGraphPred(torch.nn.Module):
     def __init__(self, num_layer, emb_dim, num_tasks, drop_ratio=0.3, desc_in=False, desc_in_size=1536,
                  num_experts=30, k=4, task_routing=False, dropout=0.5, num_g_experts=16, JK='last',
                  sag_pool=False, kt=None, open_dy=False, iattvec_loss=False, expert_struct_mode='bottleneck',
-                 hk=12):
+                 hk=12, group_importance_loss=False):
         super(MoCEGraphPred, self).__init__()
         self.num_tasks = num_tasks
         self.node_emb = AtomEncoder(emb_dim=emb_dim)
@@ -31,7 +31,8 @@ class MoCEGraphPred(torch.nn.Module):
             self.gnn.append(
                 MoCE(emb_dim, num_tasks, num_experts=num_experts, hidden_size=emb_dim, k=k, task_routing=task_routing,
                      task_routing_sizes=desc_in_size, dropout=dropout, num_g_experts=num_g_experts, sag_pool=sag_pool,
-                     kt=kt, iattvec_loss=iattvec_loss, expert_struct_mode=expert_struct_mode, hk=hk))
+                     kt=kt, iattvec_loss=iattvec_loss, expert_struct_mode=expert_struct_mode, hk=hk,
+                     group_importance_loss=group_importance_loss))
 
         self.norms = torch.nn.ModuleList()
         for layer in range(num_layer):

@@ -143,11 +143,10 @@ class MLP(nn.Module):
         return x
 
 
-
 class MoCE(nn.Module):
     def __init__(self, input_size, output_size, num_experts, hidden_size, noisy_gating=True, k=4, task_routing=False,
                  task_routing_sizes=None, dropout=0.5, num_g_experts=16, sag_pool=True, kt=None,
-                 iattvec_loss=False, expert_struct_mode='bottleneck', hierarchical=True,
+                 iattvec_loss=False, expert_struct_mode='bottleneck', hierarchical=True, group_importance_loss=False,
                  hk=12):
         super(MoCE, self).__init__()
         self.noisy_gating = noisy_gating  # for load balance
@@ -162,6 +161,7 @@ class MoCE(nn.Module):
         self.hierarchical = hierarchical
 
         self.iattvec_loss = iattvec_loss
+        self.group_importance_loss = group_importance_loss
 
         self.experts = nn.ModuleList(
             [MLP(self.input_size, self.output_size, self.hidden_size, dropout=dropout) for i in
@@ -274,7 +274,6 @@ class MoCE(nn.Module):
                 load = (self._prob_in_top_k(clean_logits, noisy_logits, noise_stddev, top_logits)).sum(0)
             else:
                 load = self._gates_to_load(gates)
-            return gates, load
         else:
             k = self.kt if self.training else self.k
             h_k = self.hk
@@ -310,7 +309,12 @@ class MoCE(nn.Module):
                     0)
             else:
                 load = self._gates_to_load(gates)
-            return gates, load
+
+        group_importance = None
+        if self.group_importance_loss:
+            group_importance = self.cv_squared(top_k_logits, dim=-1)
+
+        return gates, load, group_importance
 
     def gnns_forward(self, x, edge_index, edge_attr):
         out_x = torch.stack([self.experts_g[i](x, edge_index, edge_attr)
@@ -359,14 +363,22 @@ class MoCE(nn.Module):
             out_x = out_x_part.mean(0)
 
         if self.task_routing:
-            gates, load = self.task_routing_noisy_top_k_gating(agg_x, self.training, task_routing_x=task_routing_x,
-                                                               dataset_idx=dataset_idx)
+            gates, load, group_importance = self.task_routing_noisy_top_k_gating(agg_x, self.training,
+                                                                                 task_routing_x=task_routing_x,
+                                                                                 dataset_idx=dataset_idx)
         else:
-            gates, load = self.noisy_top_k_gating(agg_x, self.training)
+            gates, load, group_importance = self.noisy_top_k_gating(agg_x, self.training)
         # calculate importance loss
         importance = gates.sum(0)
 
         loss = self.cv_squared(importance) + self.cv_squared(load)
+
+        if self.iattvec_loss:
+            loss += cos_loss(self.attn_vectors)
+
+        if self.group_importance_loss:
+            loss += group_importance
+
         loss *= loss_coef
 
         dispatcher = SparseDispatcher(self.num_experts, gates)
@@ -390,7 +402,7 @@ class MoCE(nn.Module):
         else:
             return y, loss, out_x, None
 
-    def cv_squared(self, x):
+    def cv_squared(self, x, dim=None):
         """The squared coefficient of variation of a sample.
         Useful as a loss to encourage a positive distribution to be more uniform.
         Epsilons added for numerical stability.
@@ -402,9 +414,14 @@ class MoCE(nn.Module):
         """
         eps = 1e-10  # if only num_experts = 1
 
-        if x.shape[0] == 1:
-            return torch.tensor([0], device=x.device, dtype=x.dtype)
-        return x.float().var() / (x.float().mean() ** 2 + eps)
+        if dim is None:
+            if x.shape[0] == 1:
+                return torch.tensor([0], device=x.device, dtype=x.dtype)
+            return x.float().var() / (x.float().mean() ** 2 + eps)
+        else:
+            if x.shape[dim] == 1:
+                return torch.tensor([0], device=x.device, dtype=x.dtype)
+            return (x.float().var(dim) / (x.float().mean(dim) ** 2 + eps)).mean()
 
     def _gates_to_load(self, gates):
         """Compute the true load per expert, given the gates.
@@ -482,4 +499,9 @@ class MoCE(nn.Module):
             load = (self._prob_in_top_k(clean_logits, noisy_logits, noise_stddev, top_logits)).sum(0)
         else:
             load = self._gates_to_load(gates)
-        return gates, load
+
+        group_importance = None
+        if self.group_importance_loss:
+            group_importance = self.cv_squared(top_k_logits, dim=-1)
+
+        return gates, load, group_importance

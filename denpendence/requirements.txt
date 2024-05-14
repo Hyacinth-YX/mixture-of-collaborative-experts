@@ -1,9 +1,7 @@
 PyTDC
 networkx
 argparse
-torch
-torchvision
-torchaudio
 pandas
 numpy
 ogb
+rdkit

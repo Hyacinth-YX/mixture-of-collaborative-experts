@@ -45,11 +45,14 @@ if __name__ == '__main__':
             writer = get_log_writer(log_dir)
 
             # get loader
-            train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-            test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
+            train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
+                                      num_workers=args.num_workers)
+            test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,
+                                     num_workers=args.num_workers)
             val_loader = None
             if args.use_valid:
-                val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
+                val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True,
+                                        num_workers=args.num_workers)
             best_val_loss = None
             best_epoch = None
             if args.load_path is not None:  # train from checkpoint
@@ -143,13 +146,13 @@ if __name__ == '__main__':
                         'task_routing': args.task_routing,
                         'dropout': args.drop_ratio,
                         'num_g_experts': args.num_g_experts,
-                        'csize': args.csize,
                         'sag_pool': args.sag_pool,
                         'kt': args.kt,
                         'open_dy': args.open_dy,
                         'iattvec_loss': args.iattvec_loss,
                         'expert_struct_mode': args.expert_struct_mode,
                         'hk': args.hk,
+                        'group_importance_loss': args.group_importance_loss
                     }
 
                 model = Model(**Params).to(device)

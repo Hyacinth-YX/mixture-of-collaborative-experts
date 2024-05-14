@@ -51,7 +51,8 @@ def seed_everything(seed=11):
 def cos_loss(x):
     project = x.view(x.size(0), -1)
     project = project / project.norm(dim=-1, keepdim=True)
-    aux_loss = (project @ project.T).sum() / project.size(0) ** 2
+    # aux_loss = (project @ project.T).sum() / project.size(0) ** 2
+    aux_loss = (project @ project.T).mean()
     return aux_loss
 
 

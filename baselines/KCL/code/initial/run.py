@@ -115,7 +115,7 @@ def parse_args(args=None):
                         help='Otherwise use subsampling weighting like in word2vec')
 
     parser.add_argument('-lr', '--learning_rate', default=0.025, type=float)
-    parser.add_argument('-cpu', '--cpu_num', default=10, type=int)
+    parser.add_argument('-cpu', '--cpu_num', default=32, type=int)
     parser.add_argument('--max_steps', default=1000, type=int)
     parser.add_argument('--log_steps', default=2, type=int, help='train log every xx steps')
 

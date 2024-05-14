@@ -3,5 +3,7 @@ channels:
   - rdkit
   - pyg
 dependencies:
+  - python >=3.8
   - rdkit
   - pyg
+name: moce
