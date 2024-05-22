@@ -12,6 +12,15 @@ File share link: https://drive.google.com/drive/folders/1cyym6MB1enWqlRiN7ZNV_rN
 ```shell
 tar -xzvf cache.tar.gz cache/
 ```
+# Set Up
+please refer to `dependence/setup.sh` to install all the dependencies.
 
 # Run
-For the example command to run, please see `example_main_script.sh`.
+the example commands are provided in `example_main_script.sh`.
+
+# Result
+
+You can see our experiment results in file `MoCE-results.xlsx`.
+
+If you want to run experiment yourself, please refer to `visual_result.ipynb`. 
+This script helps you parse results and copy them to clipboard.

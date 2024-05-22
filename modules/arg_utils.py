@@ -57,6 +57,7 @@ def get_args():
     parser.add_argument('--expert_struct_mode', type=str, default='expand',
                         choices=['bottleneck', 'expand', 'None'])
     parser.add_argument('--group_importance_loss', action='store_true', default=False)
+    parser.add_argument('--sag_att_type', type=str, default='dot', choices=['dot', 'times'])
 
     # dataset special setting
     parser.add_argument('--cache_path_prefix', type=str, default='')

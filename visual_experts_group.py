@@ -13,8 +13,13 @@ if __name__ == '__main__':
     args.emb_desc=True
     args.use_valid=True
     args.no_scaffold=False
-    # args.load_path = 'output/pretrained/ablation-scaf-nn-moce-SAG-ATTLoss-ESLoss-0'
-    # args.load_path = 'output/pretrained/ablation-scaf-nn-moce-SAG-ATTLoss-0'
+    # args.load_path = 'output/pretrained/allseed-35ds-scaf-60ex-moce-NoESLoss-0'
+    # args.load_path = 'output/pretrained/allseed-35ds-scaf-60ex-moce-0'
+    # args.load_path = 'output/pretrained/ablation-scaf-moce-SAG-dotversion-iattvec_loss-0'
+    # args.load_path = 'output/pretrained/ablation-scaf-moce-SAG-dotversion-0'
+    # args.load_path = 'output/pretrained/allseed-35ds-scaf-60ex-moce-dotSAG-0'
+    args.load_path = 'output/pretrained/allseed-35ds-scaf-60ex-moce-dotSAG-ESLoss-0'
+
 
 
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")

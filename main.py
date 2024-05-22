@@ -152,7 +152,8 @@ if __name__ == '__main__':
                         'iattvec_loss': args.iattvec_loss,
                         'expert_struct_mode': args.expert_struct_mode,
                         'hk': args.hk,
-                        'group_importance_loss': args.group_importance_loss
+                        'group_importance_loss': args.group_importance_loss,
+                        'sag_att_type': args.sag_att_type
                     }
 
                 model = Model(**Params).to(device)

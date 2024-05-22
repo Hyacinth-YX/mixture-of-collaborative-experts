@@ -14,6 +14,7 @@ import numpy as np
 from torch_geometric.nn import global_mean_pool, SAGPooling
 from modules.gnn import GINEConv
 from modules.utils import reset_all_weights, cos_loss, cos_same_loss
+import math
 
 
 class SparseDispatcher(object):
@@ -147,7 +148,7 @@ class MoCE(nn.Module):
     def __init__(self, input_size, output_size, num_experts, hidden_size, noisy_gating=True, k=4, task_routing=False,
                  task_routing_sizes=None, dropout=0.5, num_g_experts=16, sag_pool=True, kt=None,
                  iattvec_loss=False, expert_struct_mode='bottleneck', hierarchical=True, group_importance_loss=False,
-                 hk=12):
+                 hk=12, sag_att_type='dot'):
         super(MoCE, self).__init__()
         self.noisy_gating = noisy_gating  # for load balance
         self.num_experts = num_experts
@@ -162,6 +163,7 @@ class MoCE(nn.Module):
 
         self.iattvec_loss = iattvec_loss
         self.group_importance_loss = group_importance_loss
+        self.sag_att_type = sag_att_type
 
         self.experts = nn.ModuleList(
             [MLP(self.input_size, self.output_size, self.hidden_size, dropout=dropout) for i in
@@ -196,8 +198,8 @@ class MoCE(nn.Module):
             self.g_gate_softmax = nn.Softmax(0)
 
         self.sag_pool = sag_pool
-        if sag_pool:
-            self.pool = SAGPooling(hidden_size, ratio=0.5)
+        if self.sag_pool:
+            self.pool = SAGPooling(1, ratio=0.5) if self.sag_att_type == 'dot' else SAGPooling(hidden_size, ratio=0.5)
             self.attn_vectors = nn.Parameter(torch.zeros(self.num_g_experts, hidden_size), requires_grad=True)
             nn.init.xavier_uniform_(self.attn_vectors)
         else:
@@ -335,7 +337,11 @@ class MoCE(nn.Module):
         """
         if self.sag_pool:
             sag_graphs = [
-                self.pool(x, edge_index, edge_attr, batch=batch, attn=self.attn_vectors[i].repeat(x.size(0), 1))
+                self.pool(
+                    x, edge_index, edge_attr, batch=batch,
+                    attn=(x @ self.attn_vectors[i] / math.sqrt(x.size(1))
+                          if self.sag_att_type == 'dot' else x * self.attn_vectors[i])
+                )
                 for i in range(self.num_g_experts)]
             agg_x_part = torch.stack([global_mean_pool(o[0], o[3]) for o in sag_graphs])
             agg_x = agg_x_part.mean(0)
